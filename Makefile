@@ -27,7 +27,7 @@ compile: ${MODS:%=%.beam}
 ## run an application from the makefile
 
 run: compile
-	${ERL} -noshell -run maze gen 10 -s init stop
+	${ERL} -noshell -run maze gen 30 -s init stop
 
 # remove all the code
 clean:

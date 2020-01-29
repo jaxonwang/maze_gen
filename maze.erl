@@ -136,24 +136,21 @@ set_parent(Graph, Nodeid, Parent) ->
         _ -> false
     end.
 
-dfs(Root, Graph) ->
+dfs(Rootid, Graph, Parent) ->
+    Root = maps:get(Rootid, Graph),
     case Root of
-         {Nodeid, Neighbors, visited, _} -> 
-            Nodestovisit_ = lists:filtermap(fun(Elem)->set_parent(Graph, Elem, Nodeid) end, Neighbors),
-            Nodestovisit = list_shuffle(Nodestovisit_),
-            NewGraph = lists:foldl(fun(Elem={Nodeid1,_,_,_}, Graphacc) ->
-                                           maps:update(Nodeid1,Elem,Graphacc)
-                                        end,
-                                   Graph,
-                                   Nodestovisit),
-            lists:foldl(fun dfs/2, NewGraph, Nodestovisit);
-         _ -> throw(should_not_be_here)
+         {Nodeid, Neighbors, not_visited, parent} -> 
+            {true, NewSelf} = set_parent(Graph, Nodeid, Parent),
+            Nodestovisit = list_shuffle(Neighbors),
+            NewGraph = maps:update(Nodeid, NewSelf,Graph),
+            lists:foldl(fun (Elem,G) -> dfs(Elem, G, Nodeid) end, NewGraph, Nodestovisit);
+         {_, _, visited, _} -> Graph;
+         _ -> throw({should_not_be_here, Root})
     end.
 
 dfs_from_start(Graph) ->
     First_node_id = {1,1},
-    {true, First_node} = set_parent(Graph, First_node_id, nil),
-    dfs(First_node, maps:update(First_node_id, First_node, Graph)).
+    dfs(First_node_id, Graph, nil).
 
 bfs_loop(Queue, Graph) ->
     case queue_size(Queue) of
