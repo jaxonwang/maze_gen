@@ -123,8 +123,9 @@ print_maze_tree(Graph, N, M) ->
                               end,
                               Graph_with_direction_2),
     Strings_to_print = [lists:flatten([maps:get({X,Y},Graph_to_print)||Y<-seq(1,M)])||X<-seq(1,N)],
-    String_to_print = lists:join("\n", Strings_to_print),
-    io:format(String_to_print, []).
+    String_to_print_ = lists:flatten(lists:join("\n", Strings_to_print)),
+    String_to_print = unicode:characters_to_binary(String_to_print_),
+    io:format("~s~n",[String_to_print]).
 
 set_parent(Graph, Nodeid, Parent) ->
     Node = maps:get(Nodeid, Graph),
@@ -170,6 +171,23 @@ bfs_loop(Queue, Graph) ->
             NewQueue = lists:foldl(fun({Nodeid_local,_,_,_}, Q)->queue_push(Nodeid_local,Q) end,
                                    Queue1, Nodestovisit),
             bfs_loop(NewQueue, NewGraph)
+    end.
+
+help()->
+    io:format("usage: erl ... gen maze SideLength...~n").
+
+gen() ->
+    help().
+
+gen(Args) ->
+    case Args of
+        [Arg] -> 
+            try list_to_integer(Arg) of
+                S -> print_maze_tree(dfs_from_start(create_grid(S,S)),S,S)
+            catch
+                error:badarg -> help()
+            end;
+        _ -> help() 
     end.
 
 bfs_from_start(Graph) ->
