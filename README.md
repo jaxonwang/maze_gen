@@ -1,4 +1,9 @@
 # maze_gen
 Maze generating algorithm just for fun, in erlang
 
-add how to later...
+# how to
+## compile
+make
+
+## run
+make run
