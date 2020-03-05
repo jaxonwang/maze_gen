@@ -4,10 +4,6 @@
 -import(lists, [seq/2]).
 -import(datastructure, [make_queue/0, queue_push/2, queue_pop/1, queue_size/1]).
 
-
--type nodeid() :: {integer(), integer()}.
--type graphnode() :: {Value::nodeid(), [nodeid()], Visited::any()}.
-
 get_neighbor(X, Y, N, M) -> get_neighbor1(X, Y, N, M, [], up).
 get_neighbor1(X, Y, N, M, Accu, Direction) ->
     case {X, Y, Direction} of
@@ -127,6 +123,70 @@ print_maze_tree(Graph, N, M) ->
     String_to_print = unicode:characters_to_binary(String_to_print_),
     io:format("~s~n",[String_to_print]).
 
+maze_encode(Graph, N, M) ->
+
+    Edge_direction = fun({X1,Y1}= _Nodeid_from, {X2,Y2} = _Nodeid_to) ->
+            case {X1, Y1, X2, Y2} of
+                {X, _, X, _} when Y1 =:= Y2 + 1 -> left;
+                {X, _, X, _} when Y1 =:= Y2 - 1 -> right;
+                {_, Y, _, Y} when X1 =:= X2 - 1 -> down;
+                {_, Y, _, Y} when X1 =:= X2 + 1 -> up 
+            end
+        end,
+    Get_direction = fun(Node) ->
+            Listfff = 
+            case Node of 
+                {_,[]} -> [];
+                {Nodeid,Neighbors} -> [Edge_direction(Nodeid, Neighbor)||Neighbor<-Neighbors]
+            end,
+            ordsets:to_list(ordsets:from_list(Listfff))
+        end,
+    Get_charactor = fun(Directions) ->
+        case Directions of
+            [down,left,right,up] -> "00";
+            [left,right,up] -> "00";
+            [down,right,up] -> "00";
+            [down,left,up] -> "01";
+            [down,left,right] -> "10";
+            [left,up] -> "01";
+            [down,left] -> "11";
+            [right,up] -> "00";
+            [down,right] -> "10";
+            [down,up] -> "01";
+            [left,right] -> "10";
+            [up] -> "01";
+            [down] -> "11";
+            [left] -> "11";
+            [right] -> "10";
+            [] -> "11"; %nothing, for root
+            _ -> throw(should_not_no_direction)
+        end
+    end,
+    Update_edge = fun(Graphin, Node)->
+            case Node of
+                {_,_,_,nil} -> Graphin;
+                {Nodeid,_,_,P} -> 
+                    {_,Neighbors}= maps:get(P, Graphin),
+                    maps:update(P, {P,[Nodeid|Neighbors]}, Graphin)
+            end
+        end,
+    Graph_with_direction_1 = maps:map(fun(_,Node)->
+                                            case Node of
+                                                {Nodeid,_,_,nil} -> {Nodeid, []};
+                                                {Nodeid,_,_,P} ->{Nodeid,[P]}
+                                            end
+                                        end,
+                                      Graph),
+    Graph_with_direction_2 = maps:fold(fun(_, Node,G)->Update_edge(G,Node) end,
+                                   Graph_with_direction_1, Graph),
+    Graph_to_print = maps:map(fun(_,Node) ->
+                                        Get_charactor(Get_direction(Node))
+                              end,
+                              Graph_with_direction_2),
+    Strings_to_print = [lists:flatten(lists:join(",",[maps:get({X,Y}, Graph_to_print)||Y<-seq(1,M)]))||X<-seq(1,N)],
+    String_to_print = lists:flatten(lists:join("\n", Strings_to_print)),
+    io:format("~s~n",[String_to_print]).
+
 set_parent(Graph, Nodeid, Parent) ->
     Node = maps:get(Nodeid, Graph),
     case Node of
@@ -178,9 +238,14 @@ gen() ->
 
 gen(Args) ->
     case Args of
-        [Arg] -> 
-            try list_to_integer(Arg) of
-                S -> print_maze_tree(dfs_from_start(create_grid(S,S)),S,S)
+        [Arg1, Arg2] -> 
+            try [list_to_integer(Arg1), list_to_integer(Arg2)] of
+                [N, M] -> 
+                    G = dfs_from_start(create_grid(N, M)),
+                    %% print_maze_tree(G, S, S),
+                    %% io:format("~n"),
+                    maze_encode(G, N, M)
+
             catch
                 error:badarg -> help()
             end;
